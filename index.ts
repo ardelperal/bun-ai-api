@@ -1,10 +1,8 @@
 import { cerebrasService } from './services/cerebras';
 import { groqService } from './services/groq';
-import { openrouterService } from './services/openrouter';
 import type { AIService, ChatMessage } from './services/types';
 
 const services: AIService[] = [
-  openrouterService,
   cerebrasService,
   groqService,
 ];
