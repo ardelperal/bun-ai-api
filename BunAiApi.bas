@@ -1,7 +1,7 @@
 Attribute VB_Name = ""BunAiApi""
 Option Explicit
 
-Private Const API_BASE_URL As String = ""http://localhost:3000/v1""
+Private Const API_BASE_URL As String = ""https://ia.romancaba.com/v1""
 Private Const API_KEY As String = ""REPLACE_ME""
 
 ' Hardcoded API key; update if you rotate secrets.
