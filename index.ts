@@ -9,7 +9,6 @@ const services: AIService[] = [
   cerebrasService,
   geminiService,
   openRouterService,
-  // otro servicio incluso local
 ]
 let currentServiceIndex = 0;
 
@@ -25,6 +24,17 @@ const server = Bun.serve({
     const { pathname } = new URL(req.url)
 
     if (req.method === 'POST' && pathname === '/chat') {
+      const requestId = crypto.randomUUID().slice(0, 8);
+      
+      // Security Check
+      const authHeader = req.headers.get('Authorization');
+      const expectedKey = process.env.BUN_AI_API_KEY;
+      
+      if (!expectedKey || !authHeader || authHeader !== `Bearer ${expectedKey}`) {
+        console.warn(`[Req: ${requestId}] ⛔ Unauthorized access attempt`);
+        return new Response("Unauthorized", { status: 401 });
+      }
+
       try {
         const body = await req.json() as { messages: ChatMessage[] };
         const { messages } = body;
@@ -34,8 +44,11 @@ const server = Bun.serve({
         }
 
         const service = getNextService();
+        const timestamp = new Date().toISOString();
+        
+        console.log(`[${timestamp}] [Req: ${requestId}] 🔄 Rotating to service: ${service?.name}`);
+        console.log(`[${timestamp}] [Req: ${requestId}] 📨 Message count: ${messages.length}`);
 
-        console.log(`Using ${service?.name} service`);
         const stream = await service?.chat(messages)
 
         return new Response(stream, {
@@ -46,7 +59,7 @@ const server = Bun.serve({
           },
         });
       } catch (error) {
-        console.error("Error processing request:", error);
+        console.error(`[Req: ${requestId}] ❌ Error processing request:`, error);
         return new Response("Invalid JSON or Internal Server Error", { status: 400 });
       }
     }
@@ -55,4 +68,5 @@ const server = Bun.serve({
   }
 })
 
-console.log(`Server is running on ${server.url}`);
+console.log(`🚀 Server is running on ${server.url}`);
+console.log(`📋 Available services: ${services.map(s => s.name).join(', ')}`);

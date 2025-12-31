@@ -32,12 +32,17 @@ export const geminiService: AIService = {
         throw new Error('No messages provided');
     }
 
+    const lastMessageText = lastMessage.parts[0]?.text;
+    if (!lastMessageText) {
+        throw new Error('Last message must contain text');
+    }
+
     const chat = model.startChat({
       history: history,
       systemInstruction: systemMessage?.content
     });
 
-    const result = await chat.sendMessageStream(lastMessage.parts[0].text);
+    const result = await chat.sendMessageStream(lastMessageText);
 
     return (async function* () {
       for await (const chunk of result.stream) {
