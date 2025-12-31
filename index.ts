@@ -23,19 +23,30 @@ const server = Bun.serve({
     const { pathname } = new URL(req.url)
 
     if (req.method === 'POST' && pathname === '/chat') {
-      const { messages } = await req.json() as { messages: ChatMessage[] };
-      const service = getNextService();
+      try {
+        const body = await req.json() as { messages: ChatMessage[] };
+        const { messages } = body;
 
-      console.log(`Using ${service?.name} service`);
-      const stream = await service?.chat(messages)
+        if (!messages || !Array.isArray(messages)) {
+             return new Response("Invalid body: 'messages' array is required", { status: 400 });
+        }
 
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
+        const service = getNextService();
+
+        console.log(`Using ${service?.name} service`);
+        const stream = await service?.chat(messages)
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          },
+        });
+      } catch (error) {
+        console.error("Error processing request:", error);
+        return new Response("Invalid JSON or Internal Server Error", { status: 400 });
+      }
     }
 
     return new Response("Not found", { status: 404 });
