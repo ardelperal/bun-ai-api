@@ -27,7 +27,7 @@ function getNextService() {
 }
 
 function getApiKey() {
-  return process.env.API_KEY ?? process.env.OPENAI_API_KEY ?? '';
+  return process.env.API_KEY ?? process.env.BUN_AI_API_KEY ?? process.env.OPENAI_API_KEY ?? '';
 }
 
 function isAuthorized(req: Request) {

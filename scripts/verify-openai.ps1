@@ -1,5 +1,5 @@
 $baseUrl = if ($env:API_BASE_URL) { $env:API_BASE_URL } else { 'http://localhost:3000' }
-$apiKey = if ($env:API_KEY) { $env:API_KEY } else { $env:OPENAI_API_KEY }
+$apiKey = if ($env:API_KEY) { $env:API_KEY } elseif ($env:BUN_AI_API_KEY) { $env:BUN_AI_API_KEY } else { $env:OPENAI_API_KEY }
 $timeoutSeconds = if ($env:API_TIMEOUT_SECONDS) { [int]$env:API_TIMEOUT_SECONDS } else { 60 }
 
 if (-not $apiKey) {

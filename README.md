@@ -9,6 +9,7 @@ Servicio en Bun que rota proveedores y expone endpoints compatibles con OpenAI p
 ## Variables de entorno
 - `API_KEY`: clave para autenticar `/v1/*` (debe estar en `.env`).
 - `OPENAI_API_KEY`: fallback si no existe `API_KEY`.
+- `BUN_AI_API_KEY`: fallback adicional si no existe `API_KEY` (para reutilizar tu key actual).
 - `MODELS`: lista CSV de modelos disponibles (ej: `mi-modelo-chat,mi-modelo-2`).
 - `PORT`: puerto del servidor (default `3000`).
 - `BUN_AI_API_KEY`: clave para el endpoint legacy `/chat` (no OpenAI-compatible).
