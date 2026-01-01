@@ -1,8 +1,8 @@
-Attribute VB_Name = ""BunAiApi""
+Attribute VB_Name = "BunAiApi"
 Option Explicit
 
-Private Const API_BASE_URL As String = ""https://ia.romancaba.com/v1""
-Private Const API_KEY As String = ""REPLACE_ME""
+Private Const API_BASE_URL As String = "https://ia.romancaba.com/v1"
+Private Const API_KEY As String = "sk-bun-ai-secure-key-9cebe5bc-5312-4135-a1cb-3e129dd3d4a0"
 
 ' Hardcoded API key; update if you rotate secrets.
 
@@ -16,14 +16,16 @@ End Function
 Public Function BunAi_ChatCompletionSimple(ByVal userMessage As String, Optional ByVal systemMessage As String = "", Optional ByVal model As String = "mi-modelo-chat", Optional ByRef statusCode As Long) As String
     Dim messagesJson As String
     Dim body As String
+    Dim dq As String
 
+    dq = Chr(34)
     messagesJson = "["
     If Len(systemMessage) > 0 Then
-        messagesJson = messagesJson & ""{""""role"""":""""system"""",""""content"""":""""" & JsonEscape(systemMessage) & """"""""},"
+        messagesJson = messagesJson & "{" & dq & "role" & dq & ":" & dq & "system" & dq & "," & dq & "content" & dq & ":" & dq & JsonEscape(systemMessage) & dq & "},"
     End If
-    messagesJson = messagesJson & ""{""""role"""":""""user"""",""""content"""":""""" & JsonEscape(userMessage) & """"""""}]"
+    messagesJson = messagesJson & "{" & dq & "role" & dq & ":" & dq & "user" & dq & "," & dq & "content" & dq & ":" & dq & JsonEscape(userMessage) & dq & "}]"
 
-    body = ""{""""model"""":""""" & JsonEscape(model) & """""""",""""messages"""":""""" & messagesJson & """"""""}"
+    body = "{" & dq & "model" & dq & ":" & dq & JsonEscape(model) & dq & "," & dq & "messages" & dq & ":" & messagesJson & "}"
     BunAi_ChatCompletionSimple = BunAi_SendRequest("POST", API_BASE_URL & "/chat/completions", body, statusCode)
 End Function
 
@@ -32,23 +34,25 @@ End Function
 Public Function BunAi_ChatCompletion(ByVal model As String, ByVal messagesJson As String, Optional ByVal temperature As Variant, Optional ByVal maxTokens As Variant, Optional ByVal stream As Variant, Optional ByRef statusCode As Long) As String
     Dim extras As String
     Dim body As String
+    Dim dq As String
 
+    dq = Chr(34)
     extras = ""
     If Not IsMissing(temperature) Then
-        extras = extras & ",""""temperature"""":" & CStr(temperature)
+        extras = extras & "," & dq & "temperature" & dq & ":" & CStr(temperature)
     End If
     If Not IsMissing(maxTokens) Then
-        extras = extras & ",""""max_tokens"""":" & CStr(maxTokens)
+        extras = extras & "," & dq & "max_tokens" & dq & ":" & CStr(maxTokens)
     End If
     If Not IsMissing(stream) Then
         If CBool(stream) Then
-            extras = extras & ",""""stream"""":true"
+            extras = extras & "," & dq & "stream" & dq & ":true"
         Else
-            extras = extras & ",""""stream"""":false"
+            extras = extras & "," & dq & "stream" & dq & ":false"
         End If
     End If
 
-    body = ""{""""model"""":""""" & JsonEscape(model) & """""""",""""messages"""":" & messagesJson & extras & ""}"
+    body = "{" & dq & "model" & dq & ":" & dq & JsonEscape(model) & dq & "," & dq & "messages" & dq & ":" & messagesJson & extras & "}"
     BunAi_ChatCompletion = BunAi_SendRequest("POST", API_BASE_URL & "/chat/completions", body, statusCode)
 End Function
 
@@ -69,10 +73,14 @@ End Function
 
 Private Function JsonEscape(ByVal value As String) As String
     Dim result As String
+    Dim dq As String
+    Dim bs As String
 
+    dq = Chr(34)
+    bs = Chr(92)
     result = value
-    result = Replace(result, "\", "\\")
-    result = Replace(result, """""", "\""")
+    result = Replace(result, bs, bs & bs)
+    result = Replace(result, dq, bs & dq)
     result = Replace(result, vbCrLf, "\n")
     result = Replace(result, vbCr, "\n")
     result = Replace(result, vbLf, "\n")
@@ -88,3 +96,4 @@ End Function
 '
 ' Debug.Print BunAi_ChatCompletionSimple("Hola, responde corto.", "Eres un asistente util.", "mi-modelo-chat", status)
 ' Debug.Print "Status: "; status
+
