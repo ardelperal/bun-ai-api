@@ -13,30 +13,40 @@ Public Function BunAi_ListModels(Optional ByRef statusCode As Long) As String
     BunAi_ListModels = BunAi_SendRequest("GET", url, "", statusCode)
 End Function
 
-Public Function BunAi_ChatCompletionSimple(ByVal userMessage As String, Optional ByVal systemMessage As String = "", Optional ByVal model As String = "mi-modelo-chat", Optional ByRef statusCode As Long) As String
+Public Function BunAi_ChatCompletionSimple(ByVal userMessage As String, Optional ByVal systemMessage As String = "", Optional ByVal model As String = "mi-modelo-chat", Optional ByVal provider As String = "", Optional ByRef statusCode As Long) As String
     Dim messagesJson As String
     Dim body As String
     Dim dq As String
+    Dim providerJson As String
 
     dq = Chr(34)
+    providerJson = ""
+    If Len(provider) > 0 Then
+        providerJson = "," & dq & "provider" & dq & ":" & dq & JsonEscape(provider) & dq
+    End If
     messagesJson = "["
     If Len(systemMessage) > 0 Then
         messagesJson = messagesJson & "{" & dq & "role" & dq & ":" & dq & "system" & dq & "," & dq & "content" & dq & ":" & dq & JsonEscape(systemMessage) & dq & "},"
     End If
     messagesJson = messagesJson & "{" & dq & "role" & dq & ":" & dq & "user" & dq & "," & dq & "content" & dq & ":" & dq & JsonEscape(userMessage) & dq & "}]"
 
-    body = "{" & dq & "model" & dq & ":" & dq & JsonEscape(model) & dq & "," & dq & "messages" & dq & ":" & messagesJson & "}"
+    body = "{" & dq & "model" & dq & ":" & dq & JsonEscape(model) & dq & providerJson & "," & dq & "messages" & dq & ":" & messagesJson & "}"
     BunAi_ChatCompletionSimple = BunAi_SendRequest("POST", API_BASE_URL & "/chat/completions", body, statusCode)
 End Function
 
 ' Advanced: pass a JSON array of messages, for example:
 ' [{"role":"system","content":"Eres un asistente."},{"role":"user","content":"Hola"}]
-Public Function BunAi_ChatCompletion(ByVal model As String, ByVal messagesJson As String, Optional ByVal temperature As Variant, Optional ByVal maxTokens As Variant, Optional ByVal stream As Variant, Optional ByRef statusCode As Long) As String
+Public Function BunAi_ChatCompletion(ByVal model As String, ByVal messagesJson As String, Optional ByVal provider As String = "", Optional ByVal temperature As Variant, Optional ByVal maxTokens As Variant, Optional ByVal stream As Variant, Optional ByRef statusCode As Long) As String
     Dim extras As String
     Dim body As String
     Dim dq As String
+    Dim providerJson As String
 
     dq = Chr(34)
+    providerJson = ""
+    If Len(provider) > 0 Then
+        providerJson = "," & dq & "provider" & dq & ":" & dq & JsonEscape(provider) & dq
+    End If
     extras = ""
     If Not IsMissing(temperature) Then
         extras = extras & "," & dq & "temperature" & dq & ":" & CStr(temperature)
@@ -52,7 +62,7 @@ Public Function BunAi_ChatCompletion(ByVal model As String, ByVal messagesJson A
         End If
     End If
 
-    body = "{" & dq & "model" & dq & ":" & dq & JsonEscape(model) & dq & "," & dq & "messages" & dq & ":" & messagesJson & extras & "}"
+    body = "{" & dq & "model" & dq & ":" & dq & JsonEscape(model) & dq & providerJson & "," & dq & "messages" & dq & ":" & messagesJson & extras & "}"
     BunAi_ChatCompletion = BunAi_SendRequest("POST", API_BASE_URL & "/chat/completions", body, statusCode)
 End Function
 
