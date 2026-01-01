@@ -4,12 +4,14 @@ import { geminiService } from './services/gemini';
 import { openRouterService } from './services/openrouter';
 import type { AIService, ChatMessage } from './types';
 
-const services: AIService[] = [
-  groqService,
-  cerebrasService,
-  geminiService,
-  openRouterService,
-]
+const serviceCatalog = [
+  { id: 'groq', service: groqService },
+  { id: 'cerebras', service: cerebrasService },
+  { id: 'gemini', service: geminiService },
+  { id: 'openrouter', service: openRouterService },
+];
+
+const services = serviceCatalog.map(entry => entry.service);
 let currentServiceIndex = 0;
 
 const corsHeaders = {
@@ -24,6 +26,36 @@ function getNextService() {
   const service = services[currentServiceIndex];
   currentServiceIndex = (currentServiceIndex + 1) % services.length;
   return service;
+}
+
+function normalizeProviderName(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function getProviderEntry(provider: string) {
+  const normalized = normalizeProviderName(provider);
+  for (let index = 0; index < serviceCatalog.length; index += 1) {
+    const entry = serviceCatalog[index];
+    const aliases = [
+      normalizeProviderName(entry.id),
+      normalizeProviderName(entry.service.name),
+    ];
+    if (aliases.includes(normalized)) {
+      return { entry, index };
+    }
+  }
+
+  return null;
+}
+
+function getServiceRotationOrder(startIndex: number) {
+  const ordered: { service: AIService; index: number }[] = [];
+  for (let offset = 0; offset < services.length; offset += 1) {
+    const index = (startIndex + offset) % services.length;
+    ordered.push({ service: services[index], index });
+  }
+
+  return ordered;
 }
 
 function getApiKey() {
@@ -253,6 +285,7 @@ const server = Bun.serve({
         temperature?: number;
         max_tokens?: number;
         stream?: boolean;
+        provider?: string;
       };
 
       try {
@@ -262,7 +295,7 @@ const server = Bun.serve({
         return badRequest('Invalid JSON body');
       }
 
-      const { model, messages, stream } = body ?? {};
+      const { model, messages, stream, provider } = body ?? {};
       if (!model || typeof model !== 'string') {
         return badRequest("Missing required field: 'model'");
       }
@@ -294,54 +327,47 @@ const server = Bun.serve({
         return badRequest(`Model not available: ${model}`);
       }
 
+      const providerName = typeof provider === 'string' ? provider.trim() : '';
+      let providerEntry: { entry: { id: string; service: AIService }; index: number } | null = null;
+      if (providerName) {
+        providerEntry = getProviderEntry(providerName);
+        if (!providerEntry) {
+          return badRequest(`Unknown provider: ${providerName}`);
+        }
+      }
+
       const prompt = messagesToPrompt(normalizedMessages);
       console.log(`[Req: ${requestId}] ?? OpenAI prompt built (${prompt.length} chars)`);
 
-      const service = getNextService();
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] [Req: ${requestId}] ?? Service: ${service?.name} | model: ${model}`);
-
       try {
-        if (!service?.chat) {
-          console.warn(`[Req: ${requestId}] ?? No generator available, using placeholder`);
-          const placeholder = async function* () {
-            yield 'TODO: conectar generador real para /v1/chat/completions';
-          };
+        const rotationStart = providerEntry ? providerEntry.index : currentServiceIndex;
+        const candidates = getServiceRotationOrder(rotationStart);
+        let selected: { service: AIService; index: number } | null = null;
+        let textStream: AsyncIterable<string> | null = null;
+        let lastError: unknown = null;
 
-          const textStream = placeholder();
-          const responseId = `chatcmpl-${crypto.randomUUID()}`;
-          const created = Math.floor(Date.now() / 1000);
-
-          if (stream) {
-            return sseResponse(createChatCompletionStream({
-              id: responseId,
-              created,
-              model,
-              textStream,
-            }));
+        for (const candidate of candidates) {
+          try {
+            textStream = await candidate.service.chat(normalizedMessages);
+            selected = candidate;
+            break;
+          } catch (error) {
+            lastError = error;
+            console.warn(`[Req: ${requestId}] ?? Provider failed: ${candidate.service.name}`, error);
           }
-
-          let content = '';
-          for await (const chunk of textStream) {
-            content += chunk;
-          }
-
-          return jsonResponse({
-            id: responseId,
-            object: 'chat.completion',
-            created,
-            model,
-            choices: [
-              {
-                index: 0,
-                message: { role: 'assistant', content },
-                finish_reason: 'stop',
-              },
-            ],
-          });
         }
 
-        const textStream = await service.chat(normalizedMessages);
+        if (!selected || !textStream) {
+          console.error(`[Req: ${requestId}] ? All providers failed`, lastError);
+          return serverError();
+        }
+
+        if (!providerEntry) {
+          currentServiceIndex = (selected.index + 1) % services.length;
+        }
+
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] [Req: ${requestId}] ?? Provider: ${selected.service.name} | model: ${model}`);
         const responseId = `chatcmpl-${crypto.randomUUID()}`;
         const created = Math.floor(Date.now() / 1000);
 

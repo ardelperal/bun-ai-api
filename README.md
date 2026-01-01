@@ -32,6 +32,7 @@ curl -s -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "mi-modelo-chat",
+    "provider": "gemini",
     "messages": [
       { "role": "system", "content": "Eres un asistente util." },
       { "role": "user", "content": "Dame una frase corta." }
@@ -39,6 +40,10 @@ curl -s -H "Authorization: Bearer $API_KEY" \
   }' \
   http://localhost:3000/v1/chat/completions
 ```
+
+Notas:
+- `provider` es opcional. Valores: `groq`, `cerebras`, `gemini`, `openrouter`.
+- Si no se especifica, el servidor rota proveedores y hace fallback si uno falla.
 
 ```bash
 # Streaming (SSE)
