@@ -96,4 +96,3 @@ End Function
 '
 ' Debug.Print BunAi_ChatCompletionSimple("Hola, responde corto.", "Eres un asistente util.", "mi-modelo-chat", status)
 ' Debug.Print "Status: "; status
-
